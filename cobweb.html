@@ -17,19 +17,27 @@
     <p>XMax: <input type="text" id="xmax" size="5" placeholder=".5"/> &nbsp;&nbsp;&nbsp; YMax: <input type="text" id="ymax" size="5" placeholder=".5"/></p>
     <p>Initial value: <input type="text" id="x1" size="8" placeholder="0.51"/></p>
     <p>Iterations: <input type="text" id="iters" size="5" placeholder="100"/> &nbsp;(Note: Performance may suffer above 10000.)</p>
-
+    <p>nth Iterate:</p><input type="text" id="nthiter" size="5" placeholder="-.5"/></p>
+    
     <!-- TODO: consider adding transient iterations and invert mode -->
 
+
+    <p>Speed:
+    <div class="slidecontainer">
+      <input type="range" min="1" max="100" value="50" class="slider" id="speed">
+    </div>
+    <input type="checkbox" id="instant" name="instant" checked><label for="instant">Instant generation</label>
+    <input type="checkbox" id="sound" name="sound"><label for="sound">Sound</label>
     <!-- button to activate script that generates canvas content -->
     <p><button id="generate" onclick="generate()">Generate cobweb diagram!</button>
-	<button id="cont" onclick="cont()">Moar iterations!</button>
-	<button id="clearCont" onclick="clearCont()">Clear and MOAR iterations!</button></p>
+      <button id="cont" onclick="cont()">Moar iterations!</button>
+	   <button id="clearCont" onclick="clearCont()">Clear and MOAR iterations!</button></p>
 
     <!-- <canvas> that it's actually drawn onto; generate at high resolution and use CSS to scale it? -->
     <canvas id="canvas" width="600" height="600">If your browser supported the <a href="https://en.wikipedia.org/wiki/Canvas_element">HTML5 canvas element</a>, then the cobweb diagram would display here.</canvas>
 
     <!-- copyright and author notice -->
-    <p>The cobweb.js code is copyright ®2017 Mark Haferkamp. This is available under <a href="LICENSE">the MIT license</a> and the latest code will generally be available at <a href="https://github.com/refola/cobweb.js">github.com/refola/cobweb.js</a>.</p>
+    <p>The cobweb.js code is copyright ®2017 Mark Haferkamp. Updated 2023 by Scott Alter. This is available under <a href="LICENSE">the MIT license</a> and the latest code will generally be available at <a href="https://github.com/refola/cobweb.js">github.com/refola/cobweb.js</a>.</p>
 
     <!-- load scripts -->
     <script src="./cobweb.js">This is the inside of the script tag.</script>

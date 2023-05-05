@@ -1,4 +1,5 @@
 // cobweb.js
+// updates by Scott Alter: smooth iteration over time, frame delay mechanism, speed, gradient color change, sound, recursive iteration.
 
 function HtmlTheme(background, text){
     this.background=background; // HTML background color
@@ -38,25 +39,30 @@ function Graph(canvas,theme){
     }
     var edgeSize=borderSize+0.5; // This small buffer zone close to the border keeps the graph from going half a pixel too far, at least in firefox.
 
-    // Change to the next color.
+    // Change to the next color. Updated to be a linear gradient between color1 and color2.
     var colorIndex=0;
+    var nstepsrepeat = 75;
     this.nextColor=function(){
-        ctx.strokeStyle=theme.draw[colorIndex];
+        const color1 = [0,0,255];
+        const color2 = [255,20,147];
+        currentColor = `rgb(
+                        ${color1[0]*(nstepsrepeat-colorIndex%nstepsrepeat)/nstepsrepeat+color2[0]*(colorIndex%nstepsrepeat)/nstepsrepeat}, 
+                        ${color1[1]*(nstepsrepeat-colorIndex%nstepsrepeat)/nstepsrepeat+color2[1]*(colorIndex%nstepsrepeat)/nstepsrepeat},
+                        ${color1[2]*(nstepsrepeat-colorIndex%nstepsrepeat)/nstepsrepeat+color2[2]*(colorIndex%nstepsrepeat)/nstepsrepeat}
+                        )`;
+        ctx.strokeStyle = currentColor;
         colorIndex++;
-        if(colorIndex>=theme.draw.length){
-            colorIndex=0
-        }
     }
 
     // Change the theme for future actions.
     this.changeTheme=function(newtheme){
         theme=newtheme;
-        colorIndex=0;
         this.nextColor();
     }
 
     // Blank out the canvas to a pristine state.
     this.resetCanvas=function(){
+        ctx.clearRect(0,0,w,h);
         // make border
         ctx.fillStyle=theme.border;
         ctx.fillRect(0,0,w,h);
@@ -64,7 +70,7 @@ function Graph(canvas,theme){
         // fill center however it's actually meant to be filled
         ctx.fillStyle=theme.fill;
         ctx.fillRect(borderSize,borderSize,w-2*borderSize,h-2*borderSize);
-        this.nextColor();
+        ctx.strokeStyle = "black";
     }
 
     // convert a mathematical x coordinate to a canvas x coordinate
@@ -80,28 +86,69 @@ function Graph(canvas,theme){
         return h-(portion*max+edgeSize);
     }
 
+
     // Plot a line segment, using math function x and y coordinates (not canvas coordinates).
-    this.plotLine=function(x1,y1,x2,y2){
+    this.plotLine= function(x1,y1,x2,y2){
+        
         // convert coordinates
         var cx1=mathToCanvasX(x1);
         var cy1=mathToCanvasY(y1);
         var cx2=mathToCanvasX(x2);
         var cy2=mathToCanvasY(y2);
+        var ratio = glob.speed/1000;//decrease for slower speed. NOTE: THIS MEANS A LINE TAKES 1/ratio FRAMES TO COMPLETE.
 
-        // plot the line segment
+        if(glob.instant == 0){
+            animate(cx1,cy1,cx2,cy2,ratio,0);
+        }else{
+            ctx.beginPath();
+            ctx.moveTo(cx1,cy1);
+            ctx.lineTo(cx2,cy2);
+            ctx.stroke();
+            ctx.closePath();
+            // change color for next draw action
+            for(i=0;i<8;i++){
+            this.nextColor();
+            }
+        }
+        
+
+        
+        
+    }
+
+   
+    //recursively animate each line framebyframe. Contains sound.
+    function animate(x1,y1,x2,y2, ratio, current){        
+        sx2 = x1+(x2-x1)*current;
+        sy2 = y1+(y2-y1)*current;
         ctx.beginPath();
-        ctx.moveTo(cx1,cy1);
-        ctx.lineTo(cx2,cy2);
+        ctx.moveTo(x1,y1);
+        ctx.lineTo(sx2,sy2);
         ctx.stroke();
         ctx.closePath();
 
-        // change color for next draw action
-        this.nextColor();
+        //modify pitch according to x-value. range:220-440 (A to A).
+        if(glob.sound){
+            glob.audio.oscillator.frequency.value = ((sx2-mathToCanvasX(glob.xmin))/(mathToCanvasX(glob.xmax)-mathToCanvasX(glob.xmin)))*220 +220;
+        }
+        if(current+ratio <1){
+            requestAnimationFrame(function() {
+                animate(x1,y1,x2,y2, ratio, current + ratio);
+            });
+        }else{//finish the line to the exact endpoint.
+            ctx.beginPath();
+            ctx.moveTo(x1,y1);
+            ctx.lineTo(x2,y2);
+            ctx.stroke();
+            ctx.closePath();               
+        }
+    
     }
-
+    
     // Plot a function.
     this.plotFunction=function(f){
         // get initial point and distance between points
+        ctx.strokeStyle = "black";
         x1=xmin;
         y1=f(x1);
         delta=(xmax-xmin)/(w-2*borderSize);
@@ -110,6 +157,7 @@ function Graph(canvas,theme){
         for(var x2=xmin+delta; x2<xmax+delta/2; x2+=delta){
             y2=f(x2);
             this.plotLine(x1,y1,x2,y2);
+            ctx.strokeStyle = "black";
             x1=x2;
             y1=y2;
         }
@@ -130,29 +178,117 @@ function parseFunction(func){
     return f;
 }
 
-// GLobal OBjects
+
+
+
+
+// GLobal Objects
 var glob={};
 
-function cobweb(theme){
-    var iters=glob.iters;
+//instant toggle
+function instant(){
+    if(glob.instant==0){
+        glob.instant = 1;
+    }else{
+        glob.instant = 0;
+    }
+}
+//sound toggle
+function sound(){
+
+    // start audio
+    if(!glob.audio){
+        var context = new AudioContext();
+        glob.audio = context;
+        glob.audio.gainNode = glob.audio.createGain();
+        glob.audio.oscillator = glob.audio.createOscillator();
+        glob.audio.oscillator.connect(glob.audio.gainNode);        
+        glob.audio.gainNode.connect(glob.audio.destination);
+        glob.audio.oscillator.type = "sine";
+        glob.audio.gainNode.gain.exponentialRampToValueAtTime(1,glob.audio.currentTime+.04);
+        glob.audio.oscillator.start(0);
+    }
+         
+    
+}
+
+
+//this is gross but it works to recursively delay a line animation by n frames. later, n is found by using the speed.
+//Javascript cannot see when the web browser completes drawings, so we have to plan it in advance.
+function frameDelay(n,x1,y1,x2,y2){
+    if(n>1){
+        requestAnimationFrame(function(){frameDelay(n-1,x1,y1,x2,y2)});
+    }else{
+        requestAnimationFrame(function(){
+            graph.plotLine(x1,y1,x2,y2);
+            // change color for next draw action
+            graph.nextColor();
+            if(x2==glob.x1){//this indicates that this is the LAST frameDelay.
+               glob.audio.gainNode.gain.setValueAtTime(0,glob.audio.currentTime);
+            }
+        });
+    }
+}
+
+//speed slider
+var slider = document.getElementById("speed");
+slider.oninput = function() {
+    glob.speed = 2500/(101-this.value);
+}
+
+//recursively iterate, using the number of iterations to tell us how far to delay our lines.
+function letsGo(nthiter, totalIts, currentIt, x1, y1){
     var graph=glob.graph;
     var func=glob.execFunc;
+    var x2=y1;
+    var y2=func(x2);
+
+    //nth iterate
+    for(let i = 1; i<nthiter; i++){
+        y2=func(y2);
+    }
+    if(!glob.instant){
+        frameDelay((totalIts-currentIt)*2*1000/glob.speed,x1,y1,x2,x2);
+        frameDelay((totalIts-currentIt)*2*1000/glob.speed+1000/glob.speed,x2,x2,x2,y2);
+    }else{
+        graph.plotLine(x1,y1,x2,x2);
+        graph.plotLine(x2,x2,x2,y2);
+    }
+
+
+    x1=x2;
+    y1=y2;
+    
+    //next iter
+    if(currentIt>0){
+            letsGo(nthiter,totalIts, currentIt - 1, x1, y1);
+        }
+        else{
+            glob.x1=x1;
+        }
+    }
+
+
+function cobweb(theme){
+    graph= glob.graph;
+    iters = glob.iters;
+    func = glob.execFunc;
+    nthiter = glob.nthiter;
     var x1=glob.x1;
+    if(glob.audio&&glob.sound){
+        glob.audio.gainNode.gain.setValueAtTime(1,glob.audio.currentTime);
+
+    }
     if(theme){
-    	graph.changeTheme(theme);
+    	glob.graph.changeTheme(theme);
     }
     
     var y1=func(x1);
     //graph.plotLine(x1,ymin,x1,y1);
-    for (var i=0;i<iters;i++){
-        var x2=y1;
-        var y2=func(x2);
-        graph.plotLine(x1,y1,x2,x2);
-        graph.plotLine(x2,x2,x2,y2);
-        x1=x2;
-        y1=y2;
-    }
-    glob.x1=x1;
+
+    //admittedly not the most intuitive function name. I was really excited when I figured this out. -Scott
+    letsGo(nthiter, iters,iters,x1,y1);
+    
 }
 
 function cont(){
@@ -164,6 +300,8 @@ function clearCont(){
 	cobweb(testTheme);
 }
 
+//note that the functions are colors based on our color gradient. To fix this, we would need to have a 
+//constant number of frames that all animations are delayed by so that the color doesn't change while the functions are still being drawn.
 function plotFn(){
     glob.graph.changeTheme(brightGraph);
     glob.graph.resetCanvas();
@@ -175,11 +313,40 @@ function plotFn(){
 function generate() {
     startTime=Date.now();
 
+    //reset
+    setup()
+
+    //plot cobweb. setTimeout needed to get the correct colors on plotFn()
+    setTimeout(()=>{
+        cobweb(testTheme);
+    },500);
+    
+
+    
+
+    endTime=Date.now();
+    log("Diagram generated in "+(endTime-startTime)+" milliseconds.");
+}
+
+//autoruns on page load.
+function setup(){
     formToGlob();
     globToHash();
     glob.execFunc=parseFunction(glob.func);
+    glob.sound = document.getElementById("sound").checked;
+    if(glob.sound&&!glob.audio){//sound is turned on, but no soundcontext made yet.
+        sound();
+    }else if(glob.sound&&glob.audio){
+        glob.audio.gainNode.gain.exponentialRampToValueAtTime(1,glob.audio.currentTime+.04);
+    }
+    if(!glob.sound&&glob.audio){
+        glob.audio.gainNode.gain.exponentialRampToValueAtTime(0.00001,glob.audio.currentTime+.04);
+    }
+    glob.speed = 2500/(101-document.getElementById("speed").value);
+    glob.instant = document.getElementById("instant").checked;
 
-    // get convas and make graph
+
+    // get canvas and make graph
     var canvas=get('canvas');
     //graphTheme=darkGraph;
     graphTheme=brightGraph;
@@ -188,10 +355,4 @@ function generate() {
     graph.resetCanvas();
     glob.graph=graph;
     plotFn();
-    
-    // plot cobweb
-    cobweb(testTheme);
-
-    endTime=Date.now();
-    log("Diagram generated in "+(endTime-startTime)+" milliseconds.");
 }

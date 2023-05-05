@@ -5,8 +5,10 @@ var defaultParams={
     xmin:0,ymin:0,
     xmax:1,ymax:1,
     x1:0.51,
-    iters:100,
-    func:'4*x*(1-x)'
+    iters:30,
+    func:'4*x*(1-x)',
+    speed:50,
+    nthiter: 1
 }
 
 // Get parameters from the URL's hash.
@@ -41,10 +43,10 @@ function loadParams(){
     }
     log("Params are: "+JSON.stringify(params));
     mapToForm(params);
-    generate();
+    setup();
 }
 
-var formVars=['xmin','xmax','ymin','ymax','x1','iters','func'];
+var formVars=['xmin','xmax','ymin','ymax','x1','iters','func','speed', 'nthiter'];
 
 // retrieve form inputs and save to glob
 function formToGlob(){
