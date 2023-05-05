@@ -193,6 +193,7 @@ function instant(){
         glob.instant = 0;
     }
 }
+
 //sound toggle
 function sound(){
 
@@ -213,6 +214,8 @@ function sound(){
 }
 
 
+
+
 //this is gross but it works to recursively delay a line animation by n frames. later, n is found by using the speed.
 //Javascript cannot see when the web browser completes drawings, so we have to plan it in advance.
 function frameDelay(n,x1,y1,x2,y2){
@@ -230,11 +233,6 @@ function frameDelay(n,x1,y1,x2,y2){
     }
 }
 
-//speed slider
-var slider = document.getElementById("speed");
-slider.oninput = function() {
-    glob.speed = 2500/(101-this.value);
-}
 
 //recursively iterate, using the number of iterations to tell us how far to delay our lines.
 function letsGo(nthiter, totalIts, currentIt, x1, y1){
@@ -287,7 +285,7 @@ function cobweb(theme){
     //graph.plotLine(x1,ymin,x1,y1);
 
     //admittedly not the most intuitive function name. I was really excited when I figured this out. -Scott
-    letsGo(nthiter, iters,iters,x1,y1);
+    letsGo(nthiter,iters,iters,x1,y1);
     
 }
 
@@ -300,8 +298,6 @@ function clearCont(){
 	cobweb(testTheme);
 }
 
-//note that the functions are colors based on our color gradient. To fix this, we would need to have a 
-//constant number of frames that all animations are delayed by so that the color doesn't change while the functions are still being drawn.
 function plotFn(){
     glob.graph.changeTheme(brightGraph);
     glob.graph.resetCanvas();
@@ -320,9 +316,6 @@ function generate() {
     setTimeout(()=>{
         cobweb(testTheme);
     },500);
-    
-
-    
 
     endTime=Date.now();
     log("Diagram generated in "+(endTime-startTime)+" milliseconds.");
@@ -333,19 +326,6 @@ function setup(){
     formToGlob();
     globToHash();
     glob.execFunc=parseFunction(glob.func);
-    glob.sound = document.getElementById("sound").checked;
-    if(glob.sound&&!glob.audio){//sound is turned on, but no soundcontext made yet.
-        sound();
-    }else if(glob.sound&&glob.audio){
-        glob.audio.gainNode.gain.exponentialRampToValueAtTime(1,glob.audio.currentTime+.04);
-    }
-    if(!glob.sound&&glob.audio){
-        glob.audio.gainNode.gain.exponentialRampToValueAtTime(0.00001,glob.audio.currentTime+.04);
-    }
-    glob.speed = 2500/(101-document.getElementById("speed").value);
-    glob.instant = document.getElementById("instant").checked;
-
-
     // get canvas and make graph
     var canvas=get('canvas');
     //graphTheme=darkGraph;
@@ -355,4 +335,19 @@ function setup(){
     graph.resetCanvas();
     glob.graph=graph;
     plotFn();
+
+    //timeout to supress audio from plotFn(). Set up audio.
+    setTimeout(()=>{
+        glob.sound = document.getElementById("sound").checked;
+        if(glob.sound&&!glob.audio){//sound is turned on, but no soundcontext made yet.
+            sound();
+        }else if(glob.sound&&glob.audio){
+            glob.audio.gainNode.gain.exponentialRampToValueAtTime(1,glob.audio.currentTime+.04);
+        }
+        if(!glob.sound&&glob.audio){
+            glob.audio.gainNode.gain.exponentialRampToValueAtTime(0.00001,glob.audio.currentTime+.04);
+        }
+        glob.speed = 2500/(101-document.getElementById("speed").value);
+        glob.instant = document.getElementById("instant").checked;
+    },100*(50/glob.speed));
 }
