@@ -1,5 +1,5 @@
-# Archive note
-Once upon a time, I had plans to make this better. But life got in the way and I'm not likely to come back to this. Feel free to fork, etc.
+# originator note
+Original credit due to Mark Haferkamp in 2017. Scott Alter updated in 2023.
 
 # cobweb.js
 This is a simple [cobweb diagram](https://en.wikipedia.org/wiki/Cobweb_plot) generator in JavaScript, compatible with all modern browsers, and safely running without any plugins, etcetera.
@@ -9,8 +9,14 @@ It's currently available at [oak.ucc.nau.edu/jws8/cobweb/cobweb.html](http://oak
 
 # Directions from source
 1. Download at least the `cobweb.html`, `cobweb.js`, and `params.js` pages in the same folder.
-1. Open `cobweb.html` in a browser.
-1. Fill in the requested cobweb details and click `Generate cobweb diagram!`
+2. Open `cobweb.html` in a browser.
+3. Fill in the requested cobweb details and click `Generate cobweb diagram!`
+
+# 2023 updates
+* Added option to iterate in real time with a speed bar. This required a gross nesting of requestAnimationFrame() and major changes to the structure of the program.
+* Changed the color of the web to be a linear gradient between two colors.
+* Added nth Iterate option.
+* Added sound according to a linear map from (xmin, xmax) to (220hz, 440hz) when iterated in real time.
 
 # Planned updates
 * More code cleanup/refactoring
@@ -19,4 +25,4 @@ It's currently available at [oak.ucc.nau.edu/jws8/cobweb/cobweb.html](http://oak
 * Auto-updating sliders (i.e., slide to change a value and the diagram is regenerated accordingly)
 
 # Copyright and License
-This has been made by Mark Haferkamp and is available under the MIT License. Please see the `LICENSE` file for details.
+This has been made by Mark Haferkamp and Scott Alter and is available under the MIT License. Please see the `LICENSE` file for details.
